@@ -1,14 +1,15 @@
-class CachedAccessor:
-    def __init__(self, name, accessor):
-        self._name = name
+class Accessor:
+    """
+    References
+    ----------
+    Descriptor HowTo Guide, https://docs.python.org/3/howto/descriptor.html
+    """
+
+    def __init__(self, accessor):
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
-        if obj is None:
-            return self._accessor
-        accessor_obj = self._accessor(obj)
-        object.__setattr__(obj, self._name, accessor_obj)
-        return accessor_obj
+    def __get__(self, obj, objtype=None):
+        return self._accessor(obj)
 
 
 class Backtest:
@@ -47,8 +48,10 @@ class Strategy:
         self.n_fast = n_fast
         self.n_slow = n_slow
 
-    backtest = CachedAccessor("backtest", Backtest)
-    trade = CachedAccessor("trade", Trade)
+    backtest = Accessor(Backtest)
+    trade = Accessor(Trade)
+    # backtest = Backtest(self)
+    # trade = Trade(self)
 
 
 sma = Strategy("AAPL", 3, 10)
