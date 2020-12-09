@@ -30,78 +30,56 @@ def cum_return(prices, positions):
     return cum_returns
 
 
-class BaseMovingAverage:
-    def __init__(self, instruments=None, n_fast=None, n_slow=None):
-        self.instruments = instruments
-        self.n_fast = n_fast
-        self.n_slow = n_slow
+class BaseBacktest:
+    def __init__(self):
         self._prices = None
         self._positions = None
         self._returns = None
 
-    def get_prices(self, start, end):
-        data = get_stock_data(self.instruments, start, end)
-        self._prices = data["Adj Close"]
+    @property
+    def _prices(self):
+        if self._prices == None:
+            symbol = self.symbol
+            data = get_stock_data(symbol)
+            self._prices = data["Adj Close"]
         prices = self._prices
         return prices
 
-    def check_prices(self, prices, start, end):
-        if prices == None and self._prices == None:
-            prices = self.get_prices(start, end)
-        elif prices == None and self._prices != None:
-            prices = self._prices
-        return prices
-
-    def check_positions(self, positions):
-        if positions == None and self._positionss == None:
-            positions = self.position()
-        elif positions == None and self._positions != None:
-            positions = self._positions
+    @property
+    def _positions(self):
+        if self._positions == None:
+            self._positions = self.position()
+        positions = self._positions
         return positions
 
+    @property
+    def _returns(self):
+        if self._returns == None:
+            self._returns = self.log_return()
+        returns = self._returns
+        return returns
+
     def log_return(self, prices=None, positions=None):
-        prices = self.check_prices(prices)
-        positions = self.check_positions(positions)
-
-        slef._returns = log_return(prices, positions)
-        returns = slef._returns
-
+        if prices == None:
+            prices = self._prices(prices)
+        if positions == None:
+            positions = self._positions(positions)
+        returns = log_return(prices, positions)
         return returns
 
     def cum_return(self, prices=None, positions=None):
-        prices = self.check_prices(prices)
-        positions = self.check_positions(positions)
+        if prices == None:
+            prices = self._prices(prices)
+        if positions == None:
+            positions = self._positions(positions)
         cum_return = cum_return(prices, positions)
         return cum_return
 
     def optimize(self, prices=None, start=None, end=None):
         pass
 
-    def metrics(self, prices=None, positions=None, returns=None):
+    def performance(self, prices=None, positions=None, returns=None):
         pass
-
-
-class SimpleMovingAverage(BaseMovingAverage):
-    def margin(self, start, end, prices=None):
-        prices = self.check_prices(prices, start, end)
-
-        n_fast = self.n_fast
-        n_slow = self.n_slow
-
-        sma_1 = simple_moving_average(prices, n_fast)
-        sma_2 = simple_moving_average(prices, n_slow)
-
-        margin = sma_1 - sma_2
-
-        return margin
-
-    def position(self, start, end, prices=None):
-        margins = self.margin(start, end, prices)
-
-        self._positions = np.sign(margins)
-        positions = self._positions
-
-        return positions
 
     def strategy_chart(self, start, end, prices=None):
         prices = self.check_prices(prices, start, end)
@@ -167,3 +145,35 @@ class SimpleMovingAverage(BaseMovingAverage):
             )
         )
         return chart
+
+
+class BaseMovingAverage:
+    def __init__(self, symbol=None, n_fast=None, n_slow=None):
+        self.symbol = symbol
+        self.n_fast = n_fast
+        self.n_slow = n_slow
+
+    backtest = BaseBacktest(self)
+
+
+class SimpleMovingAverage(BaseMovingAverage):
+    def margin(self, start, end, prices=None):
+        prices = self.check_prices(prices, start, end)
+
+        n_fast = self.n_fast
+        n_slow = self.n_slow
+
+        sma_1 = simple_moving_average(prices, n_fast)
+        sma_2 = simple_moving_average(prices, n_slow)
+
+        margin = sma_1 - sma_2
+
+        return margin
+
+    def position(self, start, end, prices=None):
+        margins = self.margin(start, end, prices)
+
+        self._positions = np.sign(margins)
+        positions = self._positions
+
+        return positions
